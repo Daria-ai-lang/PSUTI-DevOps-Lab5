@@ -1,27 +1,93 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Проверка бронирования</title>
-    <style>
-        body { font-family: sans-serif; padding: 20px; }
-        .success { color: green; font-weight: bold; }
-        .fail { color: red; font-weight: bold; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-top: 10px; }
-        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    </style>
-</head>
-<body>
-    <h1>Тест одновременного бронирования</h1>
-    <p>
-        <label>ID события (UUID):</label><br>
-        <input type="text" id="eventId" style="width: 400px; padding: 5px;" placeholder="Вставьте UUID события сюда">
-    </p>
-    <button id="testBtn">Забронировать 10 билетов ОДНОВРЕМЕННО</button>
-    
-    <div id="results"></div>
+document.addEventListener('DOMContentLoaded', async () => {
+    const select = document.getElementById('eventSelect');
+    const btn = document.getElementById('testBtn');
 
-    <script src="script.js"></script>
-</body>
-</html>
+    // 1. Загружаем список событий при старте страницы
+    try {
+        const response = await fetch('/api/v1/events?page_size=100&status=published'); // Берем только опубликованные
+        const data = await response.json();
+        
+        select.innerHTML = ''; // Очищаем "Загрузка..."
+        
+        if (data.data && data.data.length > 0) {
+            data.data.forEach(event => {
+                const option = document.createElement('option');
+                option.value = event.id;
+                // Показываем название события и сколько осталось билетов
+                option.textContent = `${event.title} (свободно: ${event.available_tickets})`;
+                select.appendChild(option);
+            });
+            btn.disabled = false; // Разблокируем кнопку
+        } else {
+            select.innerHTML = '<option value="">Нет доступных событий</option>';
+        }
+    } catch (error) {
+        select.innerHTML = '<option value="">Ошибка загрузки событий</option>';
+        console.error("Ошибка при загрузке событий:", error);
+    }
+
+    // 2. Обработка нажатия на кнопку
+    btn.addEventListener('click', async () => {
+        const eventId = select.value;
+        const resultsDiv = document.getElementById('results');
+
+        if (!eventId) {
+            alert("Пожалуйста, выберите событие!");
+            return;
+        }
+
+        resultsDiv.innerHTML = '<p>Отправляем 10 одновременных запросов...</p>';
+
+        const url = `/api/v1/reservations`;
+
+        const makeRequest = async () => {
+            const idempotencyKey = crypto.randomUUID(); 
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Idempotency-Key': idempotencyKey
+                    },
+                    body: JSON.stringify({
+                        event_id: eventId,
+                        quantity: 1
+                    })
+                });
+
+                const data = await response.json();
+                return {
+                    status: response.status,
+                    code: data.error ? data.error.code : 'SUCCESS',
+                    success: response.status === 201
+                };
+            } catch (e) {
+                return { status: 'ERROR', code: 'NETWORK_ERROR', success: false };
+            }
+        };
+
+        const promises = Array.from({ length: 10 }, () => makeRequest());
+        const results = await Promise.all(promises);
+
+        const successCount = results.filter(r => r.success).length;
+        const failCount = results.filter(r => !r.success).length;
+
+        let html = `<h3>Результаты:</h3>`;
+        html += `<p class="success">✅ Успешно забронировано: ${successCount}</p>`;
+        html += `<p class="fail">❌ Отклонено: ${failCount}</p>`;
+        html += `<table><tr><th>Запрос</th><th>HTTP Статус</th><th>Код ошибки</th></tr>`;
+        
+        results.forEach((r, i) => {
+            const color = r.success ? 'green' : 'red';
+            html += `<tr style="color: ${color};">
+                <td>Запрос ${i + 1}</td>
+                <td>${r.status}</td>
+                <td>${r.code}</td>
+            </tr>`;
+        });
+        html += `</table>`;
+        
+        resultsDiv.innerHTML = html;
+    });
+});
