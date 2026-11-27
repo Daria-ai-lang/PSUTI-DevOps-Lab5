@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Проверка бронирования</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .success { color: green; font-weight: bold; }
+        .fail { color: red; font-weight: bold; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    </style>
+</head>
+<body>
+    <h1>Тест одновременного бронирования</h1>
+    <p>
+        <label>ID события (UUID):</label><br>
+        <input type="text" id="eventId" style="width: 400px; padding: 5px;" placeholder="Вставьте UUID события сюда">
+    </p>
+    <button id="testBtn">Забронировать 10 билетов ОДНОВРЕМЕННО</button>
+    
+    <div id="results"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
