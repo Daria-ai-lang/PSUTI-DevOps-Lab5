@@ -9,7 +9,7 @@ document.getElementById('testBtn').addEventListener('click', async () => {
 
     resultsDiv.innerHTML = '<p>Отправляем 10 одновременных запросов...</p>';
 
-    const url = `http://localhost:8000/api/v1/reservations`;
+    const url = `/api/v1/reservations`;
 
     const makeRequest = async () => {
         const idempotencyKey = crypto.randomUUID(); 
