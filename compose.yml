@@ -11,8 +11,8 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
-    build: ./kazan-events
+ backend:
+    image: ghcr.io/nelkor/kazan-events:latest
     ports:
       - "8001:8000"
     environment:
