@@ -12,7 +12,7 @@ services:
       retries: 5
 
   backend:
-    build: https://github.com/nelkor/kazan-events.git
+    build: ./kazan-events
     ports:
       - "8000:8000"
     environment:
